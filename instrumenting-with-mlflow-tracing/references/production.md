@@ -1,5 +1,13 @@
 # Production Configuration
 
+This guide covers **configuration and optimization** for logging traces in production environments (environment variables, async logging, sampling).
+
+For how to **construct traces** (instrumentation methods, what to trace, decorators, manual spans), refer to:
+- `python.md` - Python instrumentation guide
+- `typescript.md` - TypeScript instrumentation guide
+
+---
+
 ## Contents
 - Environment Variables
 - Async Logging

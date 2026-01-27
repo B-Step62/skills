@@ -4,10 +4,11 @@
 - Async Function Support
 - Multi-Threading with Context Propagation
 - PII Redaction with Span Processors
-- Feedback Collection
 - Custom Span Attributes
 - Error Handling and Status
 - Trace Linking
+
+For feedback collection, see `feedback-collection.md`.
 
 ---
 
@@ -167,92 +168,6 @@ class SelectiveRedactionProcessor(SpanProcessor):
             else:
                 result[key] = value
         return result
-```
-
----
-
-## Feedback Collection
-
-Log user feedback on traces for evaluation and fine-tuning:
-
-```python
-import mlflow
-
-# After getting user feedback on a response
-def record_feedback(trace_id: str, user_rating: int, comment: str = None):
-    """
-    Record user feedback for a trace.
-
-    Args:
-        trace_id: The trace's request_id
-        user_rating: 1-5 scale rating
-        comment: Optional user comment
-    """
-    mlflow.log_feedback(
-        trace_id=trace_id,
-        name="user_rating",
-        value=user_rating,
-        source=mlflow.entities.feedback.FeedbackSource(
-            source_type="HUMAN",
-            source_id="web_ui"
-        )
-    )
-
-    if comment:
-        mlflow.log_feedback(
-            trace_id=trace_id,
-            name="user_comment",
-            value=comment,
-            source=mlflow.entities.feedback.FeedbackSource(
-                source_type="HUMAN",
-                source_id="web_ui"
-            )
-        )
-```
-
-**Capturing trace ID for feedback**:
-
-```python
-from mlflow.entities import SpanType
-
-@mlflow.trace(span_type=SpanType.CHAIN)
-def chat(message: str) -> dict:
-    response = generate_response(message)
-
-    # Get current trace ID for later feedback
-    trace = mlflow.get_current_active_span()
-    trace_id = trace.request_id if trace else None
-
-    return {
-        "response": response,
-        "trace_id": trace_id  # Return to client for feedback submission
-    }
-```
-
-**LLM-as-judge feedback**:
-
-```python
-def auto_evaluate_response(trace_id: str, question: str, response: str):
-    """Use LLM to evaluate response quality."""
-    evaluation_prompt = f"""
-    Rate the following response on a scale of 1-5:
-    Question: {question}
-    Response: {response}
-
-    Return only a number 1-5.
-    """
-
-    score = int(llm.invoke(evaluation_prompt).strip())
-
-    mlflow.log_feedback(
-        trace_id=trace_id,
-        name="llm_quality_score",
-        value=score,
-        source=mlflow.entities.feedback.FeedbackSource(
-            source_type="LLM_JUDGE",
-            source_id="gpt-4"
-        )
-    )
 ```
 
 ---
