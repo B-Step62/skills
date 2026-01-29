@@ -1,3 +1,5 @@
+![MLflow Skills](/assets/header.svg)
+
 # MLflow Skills for Coding Agents
 
 > Turn your favorite coding agent into an LLMOps expert with MLflow skills.
