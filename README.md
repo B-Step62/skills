@@ -10,12 +10,13 @@ Works with any coding agent that support Skills, including [Claude Code](https:/
 
 ## Why MLflow Skills?
 
-Building production-ready AI agents is hard. You need observability to understand what your agent is doing, evaluation to measure quality, and debugging tools when things go wrong. MLflow provides all of this, but learning the APIs, CLI commands, and best practices takes time. **These skills bridge that gap.** Instead of reading documentation, just ask:
+Building production-ready AI agents is hard. You need observability to understand what your agent is doing, evaluation to measure quality, and debugging tools when things go wrong. MLflow provides SDKs and best practices for all of these operations, and with skills we bring them directly into the environment where LLM agent development happens. Now you can go to your favorite coding agent and just ask:
 
 - *"Add tracing to my LangChain app"* → Instruments your code automatically
 - *"Why did this trace fail?"* → Analyzes spans, finds root causes, suggests fixes
 - *"Evaluate my agent's accuracy"* → Sets up datasets, scorers, and runs evaluation
-- *"Show me token usage trends"* → Queries metrics, generates reports
+- *"Improve my agent and verify your work"* → Gives the coding agent reproducible and verifiable mechanism with MLflow eval to hill climb on quality
+- *"Show me token usage trends"* → Queries metrics and analyze trends
 
 ---
 
