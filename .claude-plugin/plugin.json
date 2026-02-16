@@ -1,0 +1,14 @@
+{
+  "name": "mlflow-skills",
+  "description": "Turn your coding agent into an LLMOps expert with MLflow skills for tracing, evaluation, and observability.",
+  "version": "0.1.0",
+  "author": {
+    "name": "MLflow",
+    "url": "https://mlflow.org"
+  },
+  "homepage": "https://github.com/mlflow/mlflow-skills",
+  "repository": "https://github.com/mlflow/mlflow-skills",
+  "license": "Apache-2.0",
+  "keywords": ["mlflow", "tracing", "evaluation", "observability", "llmops", "genai"],
+  "skills": "./"
+}
