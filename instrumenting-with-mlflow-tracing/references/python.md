@@ -61,17 +61,27 @@ def my_function(query: str) -> str:
 
 ### Method 1: AutoLogging (Recommended for Frameworks)
 
-Zero-code instrumentation for supported libraries. See the [Integrations page](https://mlflow.org/docs/latest/genai/tracing/integrations.md) for the complete list.
+Zero-code instrumentation for supported libraries. See [Automatic Tracing](https://mlflow.org/docs/latest/genai/tracing/app-instrumentation/automatic.md) for supported integrations and a multi-framework example.
+
+**Choose integrations by the app's execution path:**
+
+- Enable framework autologging for orchestration, tools, and model calls.
+- Add SDK autologging for operations the framework does not separately trace (such as an embeddings SDK call inside a tool), or for useful provider request/response details.
+- Keep the framework integration alone when its coverage is sufficient. Do not enable every integration speculatively.
 
 ```python
 import mlflow
 
-# Enable integrations that add coverage or useful detail for this app.
+# Example: LangGraph with OpenAI-backed ChatDatabricks
 mlflow.langchain.autolog()  # LangChain and LangGraph
-mlflow.openai.autolog()    # Optional: OpenAI SDK, including OpenAI-backed ChatDatabricks
+mlflow.openai.autolog()    # Underlying OpenAI SDK requests
 ```
 
-Combine framework and SDK autologging when they add coverage or useful provider details; otherwise keep the framework integration alone. For ChatDatabricks, add OpenAI autologging only if its installed implementation uses the OpenAI SDK. Verify the resulting trace for overlapping spans and token usage. Do not enable every integration speculatively. LangGraph is traced through `mlflow.langchain.autolog()`. There is no `mlflow.langgraph.autolog()`.
+For `ChatDatabricks`, check the installed version's client before adding OpenAI autologging; older or alternative wrappers may use a different SDK. LangChain autologging already captures its model calls, while OpenAI autologging adds SDK details and covers direct SDK calls in the app.
+
+**Verify a representative request:** inspect the new trace's coverage, parentage, and token totals. Nested framework and SDK spans can represent one physical request; counting each model span as a request or summing all span usage can double count it. Include async, streaming, or batch paths when the app uses them.
+
+LangGraph is traced through `mlflow.langchain.autolog()`. There is no `mlflow.langgraph.autolog()`.
 
 **Do not decorate framework operations to recreate automatic spans.** `mlflow.langchain.autolog()` captures LangGraph graph execution, nodes, tools, and model calls on its own. Adding `@mlflow.trace` to those same nodes, tools, or model calls produces duplicate spans. Add a manual span only for app-specific work that the framework does not capture, such as a retrieval step you wrote or an outer application boundary (see "Combining AutoLogging with Custom Tracing" below).
 
