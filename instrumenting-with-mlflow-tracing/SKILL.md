@@ -9,7 +9,7 @@ description: Instruments Python and TypeScript code with MLflow Tracing for obse
 
 Based on the user's project, load the appropriate guide:
 
-- **Python projects**: Read `references/python.md`, including "Selecting and Combining Autolog Integrations". Inspect the framework and underlying SDK; enable multiple integrations when they add needed coverage or provider details.
+- **Python projects**: Read `references/python.md`
 - **TypeScript/JavaScript projects**: Read `references/typescript.md`
 
 If unclear, check for `package.json` (TypeScript) or `requirements.txt`/`pyproject.toml` (Python) in the project.
