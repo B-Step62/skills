@@ -3,6 +3,7 @@
 ## Contents
 - Quick Start
 - Instrumentation Methods (AutoLogging, Decorator, Manual Spans)
+- Selecting and Combining Autolog Integrations
 - User/Session Tracking
 - Combining AutoLogging with Custom Tracing
 - Common Issues
@@ -41,7 +42,9 @@ mlflow.set_experiment("my-agent")                 # skip if MLFLOW_EXPERIMENT_ID
 **For supported frameworks** (LangChain, LangGraph, OpenAI, etc.):
 
 ```python
-mlflow.langchain.autolog()  # or openai, anthropic, litellm, etc.
+mlflow.langchain.autolog()  # LangChain / LangGraph orchestration
+# Add other integrations used by the app when they add needed coverage or detail.
+# See "Selecting and Combining Autolog Integrations" below.
 ```
 
 **For custom code:**
@@ -61,18 +64,42 @@ def my_function(query: str) -> str:
 
 ### Method 1: AutoLogging (Recommended for Frameworks)
 
-Zero-code instrumentation for supported libraries. See the [Integrations page](https://mlflow.org/docs/latest/genai/tracing/integrations.md) for the complete list.
+Zero-code instrumentation for supported libraries. See [Automatic Tracing](https://mlflow.org/docs/latest/genai/tracing/app-instrumentation/automatic.md) for supported integrations and a multi-framework example.
 
 ```python
 import mlflow
 
-# Choose the autolog integration for the framework already used by this app.
+# Enable the integrations needed for the app's actual execution path.
 mlflow.langchain.autolog()  # LangChain and LangGraph
 ```
 
-For a different framework, use its matching integration instead (for example, `mlflow.openai.autolog()` for the OpenAI SDK). Do not enable every integration speculatively. LangGraph is traced through `mlflow.langchain.autolog()`. There is no `mlflow.langgraph.autolog()`.
+### Selecting and Combining Autolog Integrations
 
-**Start with one autolog call. Do not decorate framework operations to recreate automatic spans.** `mlflow.langchain.autolog()` captures LangGraph graph execution, nodes, tools, and model calls on its own. Adding `@mlflow.trace` to those same nodes, tools, or model calls produces duplicate spans. Add a manual span only for app-specific work that the framework does not capture, such as a retrieval step you wrote or an outer application boundary (see "Combining AutoLogging with Custom Tracing" below).
+Inspect the application's imports, dependencies, and call sites to identify both the orchestration framework and the SDKs actually invoked. Choose integrations by that execution path, rather than by the model provider's name. Multiple autolog calls are appropriate when they contribute needed coverage or detail; there is no one-integration limit. Do not enable every integration speculatively.
+
+- **Framework integration**: `mlflow.langchain.autolog()` captures LangChain / LangGraph execution, nodes, tools, and model calls. LangGraph uses this integration; there is no `mlflow.langgraph.autolog()`.
+- **Provider SDK integration**: add `mlflow.openai.autolog()`, `mlflow.anthropic.autolog()`, or another matching integration for SDK operations the framework does not separately trace (such as a direct embeddings SDK call inside a tool), or to capture additional SDK request/response details. OpenAI-compatible endpoints are traced by OpenAI autolog when calls actually use the OpenAI SDK.
+- **Framework coverage is already sufficient**: keep the framework integration alone when the additional SDK integration would not add useful information.
+
+**ChatDatabricks example:** OpenAI-backed `databricks_langchain.ChatDatabricks` versions, such as [v0.21.0](https://github.com/databricks/databricks-ai-bridge/blob/databricks-langchain-v0.21.0/integrations/langchain/src/databricks_langchain/chat_models.py), use the OpenAI SDK internally. When SDK details are useful, combine LangChain and OpenAI autologging:
+
+```python
+import mlflow
+from databricks_langchain import ChatDatabricks
+
+# Enable before invoking the model or graph.
+mlflow.langchain.autolog()  # Workflow, tools, and LangChain model spans
+mlflow.openai.autolog()    # Underlying OpenAI SDK requests to Databricks
+
+llm = ChatDatabricks(endpoint="<databricks-serving-endpoint>")
+response = llm.invoke("What is MLflow tracing?")
+```
+
+Check the installed wrapper's version and client implementation before adding SDK autologging. Older or alternative wrappers may use a different client. Check integration compatibility with the installed MLflow and library versions. LangChain autologging already captures ChatDatabricks model calls; OpenAI autologging adds SDK detail and covers direct OpenAI SDK calls in the same app. See [Tracing Databricks](https://mlflow.org/docs/latest/genai/tracing/integrations/listing/databricks.md) for OpenAI SDK calls to Databricks endpoints.
+
+**Verify combined tracing:** run a representative request, flush with `mlflow.flush_trace_async_logging()`, and inspect the new trace's span tree, inputs/outputs, and usage. Confirm the needed operations share a connected trace. A framework model span containing an SDK model span can describe the same physical request at two layers; count provider requests separately from spans. MLflow's built-in trace token totals avoid counting usage again on descendants of a span with usage ([aggregation in MLflow 3.8.0](https://github.com/mlflow/mlflow/blob/v3.8.0/mlflow/tracing/utils/__init__.py#L179-L225)), but a custom sum over every model span can double count it. Correct parentage is required for this accounting; unrelated roots are not deduplicated by it. Check async, streaming, and batch paths if the app uses them.
+
+**Do not decorate framework operations to recreate automatic spans.** Adding `@mlflow.trace` to nodes, tools, or model calls already captured by the framework produces redundant spans. Add a manual span only for app-specific work the framework does not capture, such as custom retrieval or an outer application boundary (see "Combining AutoLogging with Custom Tracing" below).
 
 ### Method 2: Decorator (Recommended for Custom Code)
 
@@ -222,7 +249,7 @@ The `description` attribute appears in the span's Attributes tab in the MLflow t
 
 **Traces not appearing?**
 1. Verify tracking URI is correct (`MLFLOW_TRACKING_URI` env var or `mlflow.set_tracking_uri()`)
-2. Ensure autolog is called before framework imports
+2. Ensure the matching autolog integrations are enabled before traced calls run; check setup warnings for patching failures
 3. Check experiment is configured (`MLFLOW_EXPERIMENT_ID` env var or `mlflow.set_experiment()`)
 
 **Nested spans not connected?**
